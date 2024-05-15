@@ -9,14 +9,18 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const path = require("path");
+const swaggerUi = require("swagger-ui-express");
+const logger = require("morgan");
 const db = require("./db/index");
+const swaggerJsDocsWeb = require("./config/swagger/swagger-config-web");
 const { failAction } = require("./utilities/response");
 
 /**Start import routes */
 const webRoutes = require("./api/index");
 /**End import routes */
 
-const port = process.env.PORT ? process.env.PORT : 8000;
+const env = process.env.NODE_ENV ? process.env.NODE_ENV : "dev";
+const port = process.env.PORT ? process.env.PORT : 7000;
 const app = express();
 
 // Access-Control-Allow-Origin
@@ -27,6 +31,8 @@ app.use(
     credentials: true,
   })
 );
+
+app.use(logger("dev"));
 
 app.use(
   bodyParser.json({
@@ -42,7 +48,15 @@ app.use(
   })
 );
 
-app.use(express.static("public"));
+// app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public")));
+var options = {};
+
+app.use(
+  "/web-api-docs",
+  swaggerUi.serveFiles(swaggerJsDocsWeb, options),
+  swaggerUi.setup(swaggerJsDocsWeb)
+);
 
 /*********** All Routes ********************/
 
@@ -59,6 +73,16 @@ app.use((err, req, res, next) => {
   }
 });
 
+process.on("uncaughtException", (err) => {
+  console.log(`Uncaught Exception: ${err.message}`);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.log("Unhandled rejection at ", promise, `reason: ${err.message}`);
+  process.exit(1);
+});
+
 app.get("/", (req, res) =>
   res.send(`<h1>Resimpli App ${env} environment</h1>`)
 );
@@ -68,5 +92,7 @@ app.get("/test", (req, res) =>
 );
 
 app.listen(port, function () {
-  console.log(`Express server listening on port ${port}`);
+  console.log(
+    `Express server listening on port ${port} and worker ${process.pid}`
+  );
 });
